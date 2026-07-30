@@ -1,0 +1,8 @@
+*.dta
+*.log
+*.smcl
+.DS_Store
+scratch/
+
+# editor/scratch backups
+*.bak*
