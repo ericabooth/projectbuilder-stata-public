@@ -20,6 +20,13 @@ net install projectbuilder, from("https://raw.githubusercontent.com/ericabooth/p
 help projectbuilder
 ```
 
+`net install` copies the command and its help file. The test battery ships as an
+ancillary file, so fetch it separately if you want to run it:
+
+```stata
+net get projectbuilder, from("https://raw.githubusercontent.com/ericabooth/projectbuilder-stata-public/main/") replace
+```
+
 Requires Stata 16.0 or newer. No hard dependencies.
 
 ## Quick start
@@ -119,9 +126,19 @@ automatic pass skips that step, and a one-line note names the install command.
 |---------|--------------|---------|
 | `convertanything` | bulk-convert `01_raw/` to `.dta` in `01_raw/_converted/` | `net install convertanything, from("https://raw.githubusercontent.com/ericabooth/convertanything-stata-public/main/")` |
 | `combineall` | append/merge the converted files into the analytic file | `net install combineall, from("https://raw.githubusercontent.com/ericabooth/combineall-stata-public/main/")` |
-| `descsave` | Excel codebook from `300_labels.do` | `ssc install descsave` |
-| `srctag` / `srcfind` | tag and search each variable's source lineage | author's GitHub |
+| `descsave` | codebook (.dta plus .xlsx) from `300_labels.do` | `ssc install descsave` |
+| `srctag` / `srcfind` | tag and search each variable's source lineage | `net install srctag, from("https://raw.githubusercontent.com/ericabooth/srctag-stata-public/main/")` |
+| `datadictionary` | codebook workbook; harvests srctag's tags | `ssc install datadictionary` |
 | `webdoc2` | render a richer `index.html` | `ssc install webdoc`, then `net install webdoc2` (author's GitHub) |
+
+`webdoc2` needs no extra step: projectbuilder writes a self-contained
+`header_fallback.html` into every project's `_documentation/` on every run,
+and the render stages it automatically when webdoc2's own themed
+`header.html` is not installed. (Before v2.1.0 this took a manual `net get`
+plus an adopath move; that step is gone.)
+
+Run `projectbuilder check` to see every companion's status in one table,
+with clickable install commands.
 
 When `webdoc2` is absent, `projectbuilder` writes a plain but complete
 `index.html` and `Readme.md` directly, so the documentation always exists.
@@ -136,13 +153,29 @@ When `webdoc2` is absent, `projectbuilder` writes a plain but complete
 - `r(nconverted)` — number of `.dta` files in `01_raw/_converted/`
 - `r(rebuilt)` — `1` if this call refreshed an existing project, else `0`
 
+## Your data in memory
+
+`projectbuilder` leaves the dataset in memory exactly as it found it. The
+automatic pass does load data — `convertanything` runs with `clear`, and
+`combineall` does its own `use` and `save` — so the command wraps that pass in
+`preserve`. Scaffolding or refreshing in the middle of an analysis session does
+not cost you your data. `noautoconvert` skips the pass, and with it the
+`preserve`.
+
 ## Testing
 
 `test_projectbuilder.do` scaffolds into a temporary directory and checks both
 workflows, the rebuild idempotence and edit-preservation guarantee, metadata
 preservation across a rebuild, the seeded-`_converted/` combine path, the
 clobber refusal (602), name and option validation (198), nesting, HTML escaping,
-and the generated control file. Synthetic data only; nothing is committed.
+and the generated control file. It runs every example printed in the help file
+and the clickable *Try it now* walkthrough, so the documentation cannot drift
+from the code, and it runs all seven generated do-files end to end, so the
+pipeline the package writes cannot break unnoticed. Synthetic data only;
+nothing is committed.
+
+If you installed rather than cloned, get the file first with `net get
+projectbuilder` (see [Install](#install)); it lands in the current directory.
 
 The test finds the package itself: it uses the first of an argument, an
 existing `$pkgroot`, the current directory, or `findfile projectbuilder.ado`.
@@ -153,6 +186,128 @@ by naming the package folder:
 stata-mp -b do test_projectbuilder.do
 stata-mp -b do test_projectbuilder.do "/path/to/projectbuilder-stata-public"
 ```
+
+## Changes in 2.1.0
+
+- **Self-contained documentation render.** projectbuilder now writes
+  `header_fallback.html` into every project, and the generated `_runall.do`
+  stages it under the name webdoc2's `wdinit` looks for whenever no
+  `header.html` is installed — then removes it after the render. The old
+  requirement to `net get webdoc2` and move its ancillary `header.html`
+  onto the adopath is gone; a webdoc2 render succeeds with nothing
+  installed beyond `webdoc` and `webdoc2` themselves. The fallback header
+  has no CDN links, so rendered pages read correctly offline.
+- **`projectbuilder sitebuild`** scans a base folder for projects and
+  writes `projects_index.html` + `projects_index.md`: one catalog page
+  linking every project's documentation site with its recorded metadata.
+  A folder of isolated project sites becomes a browsable portfolio.
+- **`projectbuilder check`** prints one table covering every optional
+  companion — installed or missing, what it adds, and the exact install
+  command, clickable — replacing the install hints that were scattered
+  across five different moments of a run. Stores `r(missing)` and
+  `r(nmissing)` for scripts.
+- **Per-stage run log.** The generated control file's run-all block times
+  each pipeline stage and appends a line to `_documentation/run_log.txt`;
+  a failing stage is logged with its return code before the failure is
+  re-raised.
+- **Raw-file change report.** Every run records each raw file's `checksum`
+  in `_project_meta.txt`; a rebuild compares and prints how many raw files
+  are new, changed, and unchanged, naming the changed ones.
+- `sitebuild` and `check` are reserved words and cannot be used as project
+  names.
+
+## Changes in 2.0.1
+
+- The dataset in memory is preserved across the automatic convert/combine pass.
+  It used to be silently replaced by the converted file.
+- The generated `400_data_profiler.do` runs under the `version 16.0` pin that
+  `000_control.do` sets. It used to emit Stata 17 `table, statistic()` syntax
+  and stop with r(198).
+- `builddocs` renders. The generated `_runall.do` now carries a literal
+  documentation path instead of `$docs`, which is undefined at the point
+  `projectbuilder` runs that file.
+- A backtick in any option value is refused up front, naming the option. It
+  used to abort partway through and leave a half-built folder that blocked the
+  corrected re-run with 602.
+- A tilde in a value survives into the generated files. `url(".../~Dave/...")`
+  used to be written out as `.../$ave/...`.
+- A `$` or a backtick recorded in `_project_meta.txt` survives a rebuild.
+- A relative `path()` is resolved, so `r(path)` and `$root` are absolute as
+  documented.
+- Failures are reported rather than swallowed: files `data()` could not copy, a
+  base that exists but is not writable, and directories that cannot be listed.
+- Directory tests use Mata's `direxists()` in place of `confirm file dir/.`.
+
+First-run clarity, from watching new readers work through the help:
+
+- The "Next steps" block no longer tells you to review an analytic file that was
+  never created. Without the optional companions — the default state — it now
+  says the file is missing and gives the two ways to get one.
+- A `data()` folder that does not exist is reported as an error rather than a
+  passing note, so an empty project no longer looks like a success.
+- `rebuild` on a project that does not exist still scaffolds one, which is what
+  makes it safe in a scheduled script, but it now says that is what it did. A
+  mistyped name used to look like a successful refresh. `r(rebuilt)` is `1` only
+  when an existing project was refreshed.
+- The help gained a Quick start, and Workflow A now creates the folder its
+  example reads from, so its first worked example runs as printed.
+- The Options section documents the `des()` / `desc` abbreviation split and the
+  fact that options changing a guarded do-file need `replace` to take effect.
+
+What the command prints now matches the help around it:
+
+- The `Rerun:` hint is copy-pasteable. It used to drop the `path()` you built
+  with, so pasting it from another directory made a second empty project, and
+  it printed a name with spaces unquoted, which the command itself rejects.
+- The console said "Method B" where the help says Workflow B.
+- `descsave` is recorded in `_project_meta.txt` like every other option. A bare
+  rebuild used to report it as `no`, and `rebuild replace` deleted the codebook
+  call it had written.
+- A bare rebuild says when `outcomes()`/`over()`/`descsave` were recorded but
+  `_code/` was left alone, and `replace` says when it overwrote your edits.
+  Nothing is archived automatically; the `_archive/` folders are yours.
+- `builddocs` runs the render quietly and reports one line either way. It used
+  to echo the whole of `_runall.do` and end in a bare `r(601)` that read as a
+  crash when it was caught.
+- `publicfacing()` trims surrounding spaces; `othernotes()` is echoed in the
+  summary like the other metadata; `description()` reaches the header of
+  `000_control.do`, which the help had claimed all along.
+- `Readme.md` gets Markdown escaping rather than HTML: `R&D` stayed `R&amp;D`
+  in a file people read raw.
+- Warnings when the converted count does not match the raw count — same-stem
+  files overwriting each other, or stale output from a raw file since deleted.
+- `path()` naming an existing file says so instead of "not found".
+
+And one defect in the code the package *generates*, found by running the
+generated pipeline rather than only inspecting it:
+
+- `300_labels.do` called `descsave using "<file>.xlsx", ... replace`. `descsave`
+  has no top-level `replace`, and its `using` names the file to *describe*, not
+  the output — so on any machine where `descsave` was installed the file stopped
+  with `r(198)`. Everyone else hit the "not installed" branch, which is why it
+  went unseen. It now calls `descsave, list(...) saving("<file>.dta", replace)`
+  and exports that to `.xlsx` with `export excel`, wrapped in `preserve` so the
+  analytic file is still loaded afterwards. The test battery now runs all seven
+  generated do-files instead of only `000_control.do`.
+
+An independent clean-room pass then found two more, both in `builddocs`:
+
+- The webdoc2 render landed in `_documentation/index.html`, while the run's
+  `Docs:` pointer, the help, and the README all name
+  `_documentation/website/index.html` — so the page you were sent to was always
+  the built-in fallback, never the rendered one. The generated `_runall.do` now
+  copies the rendered page into `website/`.
+- `builddocs` reported `rendered.` even when webdoc2 had failed, because the
+  generated `_runall.do` swallowed the error and always returned 0. It now
+  propagates the return code, so a failure is reported as one.
+
+Also: a tilde in the *filename* part of `url()` was still corrupted on its way
+into `100_data_download.do` (`.../~Dataset.csv` became `$raw/$ataset.csv`, which
+downloads into a hidden `.csv`); the `Rerun:` hint now always carries `path()`,
+so it is portable even for a project built in the current directory; the `.pkg`
+description no longer promises an analytic file that a companion-free install
+does not produce; and the README says how to obtain the test file after a
+`net install`.
 
 ## Authors
 

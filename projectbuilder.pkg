@@ -7,8 +7,9 @@ d folder, and a numbered do-file pipeline (000_control through
 d 600_analysis). A control file holds every path in one place and can
 d run the whole pipeline. If you already have the data, point data() at
 d local files or url() at a source address and projectbuilder copies it
-d in, converts it, appends it into one analytic file, and writes a
-d documentation page. If the data comes later, scaffold now and rerun
+d in and writes a documentation page; with the optional convertanything
+d and combineall installed it also converts each raw file and appends
+d them into one analytic file. If the data comes later, scaffold now and rerun
 d with rebuild on every refresh; rebuild never overwrites a do-file you
 d have edited unless you add replace. The tool is self-contained (every
 d file is written by the program, no template folder), uses only Stata's
@@ -20,11 +21,26 @@ d srctag/srcfind (author's GitHub), and webdoc2 (author's GitHub).
 d
 d Requires: Stata 16.0 or newer.
 d
+d The command leaves the dataset in memory untouched.
+d
+d v2.1.0: the webdoc2 documentation render is self-contained (a fallback
+d header ships inside every project; no extra fetch or adopath step); the
+d new sitebuild subcommand writes a catalog page across every project
+d under a folder; the new check subcommand reports every optional
+d companion in one table with clickable install commands; the generated
+d control file logs per-stage runtimes to run_log.txt; and raw files are
+d checksummed so a rebuild reports which are new, changed, or unchanged.
+d
+d A test battery ships with the package as an ancillary file; retrieve it
+d with -net get projectbuilder- and run it with
+d -do test_projectbuilder.do-.
+d
 d Authors: Eric A. Booth, Sr Researcher, Texas 2036
 d          Elizabeth Teas, Sr Research Scientist, Far Harbor, LLC
 d Support: eric.a.booth@gmail.com
 d
-d Distribution-Date: 20260730
+d Distribution-Date: 20260808
 d
 f projectbuilder.ado
 f projectbuilder.sthlp
+f test_projectbuilder.do
