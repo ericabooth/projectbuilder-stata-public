@@ -29,6 +29,9 @@ net get projectbuilder, from("https://raw.githubusercontent.com/ericabooth/proje
 
 Requires Stata 16.0 or newer. No hard dependencies.
 
+
+<img width="2400" height="1260" alt="projectbuilder_srctag_suite" src="https://github.com/user-attachments/assets/f4aa142e-d63d-46b7-a805-247bac2fc10d" />
+
 ## Quick start
 
 **Workflow A — the data already exists.** Point `data()` at a folder of files
