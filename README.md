@@ -140,6 +140,14 @@ plus an adopath move; that step is gone.)
 Run `projectbuilder check` to see every companion's status in one table,
 with clickable install commands.
 
+Three of the companions form one provenance chain with projectbuilder:
+`combineall` stamps `char[source]` on every variable it harmonizes while
+building the analytic file, the generated `300_labels.do` invites
+`srctag` to add what those stamps lack (agency, vintage, URL), and
+`datadictionary` harvests it all into a codebook workbook a client can
+read without Stata. The srctag package's help files document the full
+chain (`help srctag`, section "The ecosystem").
+
 When `webdoc2` is absent, `projectbuilder` writes a plain but complete
 `index.html` and `Readme.md` directly, so the documentation always exists.
 
