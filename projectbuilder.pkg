@@ -23,6 +23,9 @@ d Requires: Stata 16.0 or newer.
 d
 d The command leaves the dataset in memory untouched.
 d
+d v2.1.2: sitebuild also catalogs Source/Subsource projects one level
+d down; the version stamped into generated files is current.
+d
 d v2.1.1: a leading ~ in path(), sitebuild path(), and data() means the
 d home folder rather than a folder named ~ under the current directory.
 d

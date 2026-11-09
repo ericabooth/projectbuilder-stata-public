@@ -1,4 +1,4 @@
-* test_projectbuilder.do -- test battery for projectbuilder v2.1.1
+* test_projectbuilder.do -- test battery for projectbuilder v2.1.2
 * Run from the package folder, or from any scratch directory by naming the
 * package folder:
 *     stata-mp -b do test_projectbuilder.do
@@ -229,11 +229,11 @@ assert r(N) == 0
 loadlines "$work/meta_index_before.html"
 gen long _ln = _n
 tempfile before_html
-quietly save `before_html'
+quietly save `"`before_html'"'
 loadlines "$work/Meta/_documentation/website/index.html"
 gen long _ln = _n
 rename v1 v1_after
-quietly merge 1:1 _ln using `before_html'
+quietly merge 1:1 _ln using `"`before_html'"'
 assert _merge == 3
 quietly count if v1_after != v1 & !strpos(v1, "Built ")
 assert r(N) == 0
@@ -241,11 +241,11 @@ assert r(N) == 0
 loadlines "$work/meta_readme_before.md"
 gen long _ln = _n
 tempfile before_md
-quietly save `before_md'
+quietly save `"`before_md'"'
 loadlines "$work/Meta/_documentation/Readme.md"
 gen long _ln = _n
 rename v1 v1_after
-quietly merge 1:1 _ln using `before_md'
+quietly merge 1:1 _ln using `"`before_md'"'
 assert _merge == 3
 quietly count if v1_after != v1 & !strpos(v1, "Built ")
 assert r(N) == 0
@@ -458,13 +458,13 @@ di as text "{hline 70}"
 di as text "TEST n: a tilde survives into the generated files"
 di as text "{hline 70}"
 * Used to: pb_wl substituted its own ~D/~B markers on the finished line, so
-* url("https://example.edu/~Dave/data.csv") was written out as
+* url("http://127.0.0.1:9/~Dave/data.csv") was written out as
 * ".../$ave/data.csv" -- silently, and only in the do-files, so the docs and
 * the code disagreed.
 projectbuilder Tilde, path("$work") noautoconvert ///
-    url("https://example.edu/~Dave/data.csv") description("~Daily refresh")
+    url("http://127.0.0.1:9/~Dave/data.csv") description("~Daily refresh")
 loadlines "$work/Tilde/_code/100_data_download.do"
-quietly count if strpos(v1, "https://example.edu/~Dave/data.csv")
+quietly count if strpos(v1, "http://127.0.0.1:9/~Dave/data.csv")
 assert r(N) >= 1
 * NB: write the dollar sign with char(36).  A literal "$ave" in this do-file
 * would be expanded as a global by Stata before -strpos- ever saw it, and
@@ -724,12 +724,12 @@ quietly count if strpos(v1, `"local outcomes "total_budget""')
 assert r(N) == 1
 
 * a url() that cannot be reached must still leave a complete scaffold
-capture noisily projectbuilder Ex08Open, url("https://example.com/data.csv")
+capture noisily projectbuilder Ex08Open, url("http://127.0.0.1:9/data.csv")
 assert _rc == 0
 confirm file "Ex08Open/_code/000_control.do"
 confirm file "Ex08Open/_documentation/website/index.html"
 loadlines "Ex08Open/_code/100_data_download.do"
-quietly count if strpos(v1, "https://example.com/data.csv")
+quietly count if strpos(v1, "http://127.0.0.1:9/data.csv")
 assert r(N) >= 1                    // the fetch is recorded either way
 
 projectbuilder Ex05Feed, noautoconvert
@@ -1231,6 +1231,26 @@ capture noisily projectbuilder sitebuild, path("$work/_site/nope")
 assert _rc == 601
 di as text "  sitebuild cataloged 2 projects and skipped the impostor"
 
+* v2.1.2: a Source/Subsource project sits one level down and is cataloged
+* too (it used to be left out without a word).
+mkdir "$work/_site2"
+quietly cd "$work/_site2"
+projectbuilder TopOne, description("top-level project")
+projectbuilder Agency/Extract, description("one agency extract")
+mkdir "Agency/NotAProject"                   // no meta file: still skipped
+projectbuilder sitebuild
+assert r(nprojects) == 2
+loadlines "projects_index.md"
+quietly count if strpos(v1, "Agency/Extract") & strpos(v1, "one agency extract")
+assert r(N) == 1
+quietly count if strpos(v1, "NotAProject")
+assert r(N) == 0
+loadlines "projects_index.html"
+quietly count if strpos(v1, "Agency/Extract")
+assert r(N) >= 1                             // and in the HTML catalog
+quietly cd `"`pwd_before'"'
+di as text "  sitebuild also cataloged the Source/Subsource project"
+
 di as text ""
 di as text "{hline 70}"
 di as text "TEST hh: run_all logs per-stage runtimes to run_log.txt"
@@ -1374,5 +1394,5 @@ di as text "  ~ resolved to the home folder in path() and sitebuild path()"
 
 di as text ""
 di as text "{hline 70}"
-di as text "projectbuilder v2.1.1: ALL TESTS PASSED"
+di as text "projectbuilder v2.1.2: ALL TESTS PASSED"
 di as text "{hline 70}"

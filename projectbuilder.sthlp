@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1.1 09nov2026 Eric A. Booth and Elizabeth Teas}{...}
+{* *! version 2.1.2 09nov2026 Eric A. Booth and Elizabeth Teas}{...}
 {vieweralsosee "[P] file" "help file"}{...}
 {vieweralsosee "[D] copy" "help copy"}{...}
 {viewerjumpto "Syntax"            "projectbuilder##syntax"}{...}
@@ -388,7 +388,10 @@ project's {cmd:_documentation/} on every run. When webdoc2's own themed
 {cmd:header.html} is installed (on the adopath, or dropped into
 {cmd:_documentation/}), the render uses that instead; the fallback is
 self-contained (no CDN links), so the page reads correctly offline and inside
-networks that block external fetches. To install the renderer:{p_end}
+networks that block external fetches. The fallback header and the
+{cmd:sitebuild} catalog page use fixed heading colors (navy {cmd:#1b2d55} with
+an orange {cmd:#d44500} rule); they are cosmetic only. For your own colors, put
+your own {cmd:header.html} in {cmd:_documentation/}. To install the renderer:{p_end}
 
 {cmd}{...}
         . ssc install webdoc
@@ -440,8 +443,11 @@ one) for project folders -- anything holding
 catalog page with each project's name, description, topic, creation date,
 public-facing flag, and a link to its documentation site. {opt title()}
 names the page (default "Project catalog"). Rerun it after any project
-changes; it stores {cmd:r(nprojects)} and {cmd:r(catalog)}. A folder
-without the metadata file is skipped, so mixed directories are fine:{p_end}
+changes; it stores {cmd:r(nprojects)} and {cmd:r(catalog)}. A first-level
+folder without the metadata file is searched one level down, so a project
+made with the {it:source}/{it:subsource} form ({cmd:projectbuilder Agency/Extract})
+is cataloged as {cmd:Agency/Extract}; folders with no metadata at either level
+are skipped, so mixed directories are fine:{p_end}
 
 {cmd}{...}
         . projectbuilder sitebuild, path("~/projects") title("Team portfolio")

@@ -1,4 +1,4 @@
-*! version 2.1.1  09nov2026  Eric A. Booth, Sr Researcher, Texas 2036
+*! version 2.1.2  09nov2026  Eric A. Booth, Sr Researcher, Texas 2036
 *!                           Elizabeth Teas, Sr Research Scientist, Far Harbor, LLC
 *! projectbuilder -- scaffold a data-analysis project folder with a
 *!                   numbered do-file pipeline, then (optionally) ingest
@@ -12,6 +12,8 @@
 *! no shell calls.  Companion to "Applied Program Evaluation Using Stata".
 *! Support: eric.a.booth@gmail.com
 *!
+*! v2.1.2: sitebuild also catalogs Source/Subsource projects one level
+*!         down; the version stamped into generated files is current.
 *! v2.1.1: a leading ~ in path(), sitebuild path(), and data() means the
 *!         home folder (HOME; USERPROFILE on Windows), not a relative
 *!         folder named ~ under the current directory.
@@ -445,7 +447,7 @@ program define projectbuilder, rclass
         quietly file open `fh' using `"`code'/000_control.do"', write text replace
         pb_wl `fh' `"*==============================================================="'
         pb_wl `fh' `"* 000_control.do -- `proj_label'"'
-        pb_wl `fh' `"* Created `created' by `author' (scaffolded by projectbuilder v2.1.0)"'
+        pb_wl `fh' `"* Created `created' by `author' (scaffolded by projectbuilder v2.1.2)"'
         pb_wl `fh' `"* Last built `lastbuilt'"'
         pb_wl `fh' `"* `descfull'"'
         pb_wl `fh' `"* The control file: every path in one place."'
@@ -1072,7 +1074,7 @@ program define projectbuilder, rclass
         pb_unesc `m' `"``m''"'
     }
     di as txt _n "{hline 66}"
-    di as txt "projectbuilder OK  (v2.1.0)"
+    di as txt "projectbuilder OK  (v2.1.2)"
     di as txt `"  Project       : `proj_label'"'
     di as txt `"  Location      : `target'"'
     di as txt `"  Description   : `macval(descfull)'"'
@@ -1360,7 +1362,7 @@ program define pb_docs
     pb_htmllist `fh' `"`rawd'"'   "*"      "Raw files (01_raw/)"
     pb_htmllist `fh' `"`convd'"'  "*.dta"  "Converted files (01_raw/_converted/)"
     pb_htmllist `fh' `"`cleand'"' "*.dta"  "Analytic files (02_cleaned/)"
-    file write `fh' `"<p class="muted">Built `macval(stamp)' by projectbuilder v2.1.0."' _n
+    file write `fh' `"<p class="muted">Built `macval(stamp)' by projectbuilder v2.1.2."' _n
     file write `fh' " Install webdoc2 for a richer rendering.</p>" _n
     file write `fh' "</body></html>" _n
     file close `fh'
@@ -1382,7 +1384,7 @@ program define pb_docs
     pb_mdlist `fh' `"`rawd'"'   "*"     "Raw files (01_raw/)"
     pb_mdlist `fh' `"`convd'"'  "*.dta" "Converted files (01_raw/_converted/)"
     pb_mdlist `fh' `"`cleand'"' "*.dta" "Analytic files (02_cleaned/)"
-    file write `fh' _n `"_Built `macval(md_stamp)' by projectbuilder v2.1.0._"' _n
+    file write `fh' _n `"_Built `macval(md_stamp)' by projectbuilder v2.1.2._"' _n
     file close `fh'
 end
 
@@ -1443,7 +1445,7 @@ program define pb_fallbackheader
     gettoken proj 0 : 0
     tempname fh
     quietly file open `fh' using `"`hf'"', write text replace
-    file write `fh' "<!-- header_fallback.html -- written by projectbuilder v2.1.0." _n
+    file write `fh' "<!-- header_fallback.html -- written by projectbuilder v2.1.2." _n
     file write `fh' "     Used by index.do's wdinit only when webdoc2's own header.html" _n
     file write `fh' "     is not installed.  Rewritten on every projectbuilder run; put" _n
     file write `fh' "     customizations in a header.html instead (it wins). -->" _n
@@ -1498,8 +1500,30 @@ program define pb_sitebuild, rclass
     }
     if `"`title'"' == "" local title "Project catalog"
 
-    capture local dirs : dir `"`base'"' dirs "*"
+    capture local dirs : dir `"`base'"' dirs "*", respectcase
     if _rc local dirs ""
+
+    * Candidate projects: a first-level folder holding the metadata file, or,
+    * when it holds none, its own subfolders that do -- the Source/Subsource
+    * form (projectbuilder Agency/Extract) puts the project one level down.
+    local cands ""
+    foreach d of local dirs {
+        if substr(`"`macval(d)'"', 1, 1) == "." continue
+        if inlist(`"`macval(d)'"', "_archive", "_code", "_documentation") continue
+        capture confirm file `"`base'/`macval(d)'/_documentation/_project_meta.txt"'
+        if !_rc {
+            local cands `"`macval(cands)' `"`macval(d)'"'"'
+            continue
+        }
+        capture local subs : dir `"`base'/`macval(d)'"' dirs "*", respectcase
+        if _rc local subs ""
+        foreach s of local subs {
+            if substr(`"`macval(s)'"', 1, 1) == "." continue
+            if inlist(`"`macval(s)'"', "_archive", "_code", "_documentation") continue
+            capture confirm file `"`base'/`macval(d)'/`macval(s)'/_documentation/_project_meta.txt"'
+            if !_rc local cands `"`macval(cands)' `"`macval(d)'/`macval(s)'"'"'
+        }
+    }
 
     local stamp `"`c(current_date)' `c(current_time)'"'
     tempname hh mm
@@ -1529,9 +1553,7 @@ program define pb_sitebuild, rclass
     file write `mm' "|---------|-------------|-------|---------|---------------|------|" _n
 
     local np = 0
-    foreach d of local dirs {
-        if substr(`"`macval(d)'"', 1, 1) == "." continue
-        if inlist(`"`macval(d)'"', "_archive", "_code", "_documentation") continue
+    foreach d of local cands {
         local mf `"`base'/`macval(d)'/_documentation/_project_meta.txt"'
         capture confirm file `"`mf'"'
         if _rc continue
@@ -1586,10 +1608,10 @@ program define pb_sitebuild, rclass
         file write `mm' "| (none found) | | | | | |" _n
     }
     file write `hh' "</table>" _n
-    file write `hh' `"<p class="muted">Built `stamp' by projectbuilder v2.1.0 sitebuild. Rerun after any project changes.</p>"' _n
+    file write `hh' `"<p class="muted">Built `stamp' by projectbuilder v2.1.2 sitebuild. Rerun after any project changes.</p>"' _n
     file write `hh' "</body></html>" _n
     file close `hh'
-    file write `mm' _n `"_Built `stamp' by projectbuilder v2.1.0 sitebuild._"' _n
+    file write `mm' _n `"_Built `stamp' by projectbuilder v2.1.2 sitebuild._"' _n
     file close `mm'
 
     di as txt "projectbuilder sitebuild: " as res `np' as txt " project(s) cataloged"
