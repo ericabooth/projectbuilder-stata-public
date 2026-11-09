@@ -198,6 +198,18 @@ stata-mp -b do test_projectbuilder.do
 stata-mp -b do test_projectbuilder.do "/path/to/projectbuilder-stata-public"
 ```
 
+## Changes in 2.1.1
+
+- A leading `~` in `path()`, `projectbuilder sitebuild, path()`, and
+  `data()` now means the home folder (`HOME`; on Windows `USERPROFILE`,
+  then `HOMEDRIVE`+`HOMEPATH`). Before, `path("~/projects")` was joined to
+  the current directory and failed with a misleading "base path not
+  found", the help's own `sitebuild, path("~/projects")` example failed,
+  and `path("~")` silently scaffolded into a literal folder named `~`.
+- The test battery checks folders with Mata `direxists()` instead of
+  `confirm file "dir/."`, and its bare-install test no longer assumes the
+  optional companions were installed before it ran.
+
 ## Changes in 2.1.0
 
 - **Self-contained documentation render.** projectbuilder now writes

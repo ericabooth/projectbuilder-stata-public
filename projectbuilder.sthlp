@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1.0 08aug2026 Eric A. Booth and Elizabeth Teas}{...}
+{* *! version 2.1.1 09nov2026 Eric A. Booth and Elizabeth Teas}{...}
 {vieweralsosee "[P] file" "help file"}{...}
 {vieweralsosee "[D] copy" "help copy"}{...}
 {viewerjumpto "Syntax"            "projectbuilder##syntax"}{...}
@@ -162,7 +162,10 @@ For a guided tour you can click through in the Viewer, see
 created. The default is the current working directory. The project is created
 at {it:path}{cmd:/}{it:Source} (or {it:path}{cmd:/}{it:Source}{cmd:/}{it:Subsource}).
 A relative path is resolved against the current directory, so {cmd:r(path)} and
-the {cmd:$root} stamped into {cmd:000_control.do} are always absolute. The base
+the {cmd:$root} stamped into {cmd:000_control.do} are always absolute. A leading
+{cmd:~} ({cmd:~} alone, {cmd:~/}, or {cmd:~\}) means your home folder: {cmd:HOME},
+or on Windows {cmd:USERPROFILE} (then {cmd:HOMEDRIVE}+{cmd:HOMEPATH}).  The same
+holds for {cmd:data()} and for {cmd:projectbuilder sitebuild, path()}. The base
 itself is created if its own parent already exists; {cmd:path("new/deeper")}
 where neither level exists stops with error 601 rather than making two levels
 at once.{p_end}

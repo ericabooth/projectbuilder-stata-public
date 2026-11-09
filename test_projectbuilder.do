@@ -1,4 +1,4 @@
-* test_projectbuilder.do -- test battery for projectbuilder v2.0.1
+* test_projectbuilder.do -- test battery for projectbuilder v2.1.1
 * Run from the package folder, or from any scratch directory by naming the
 * package folder:
 *     stata-mp -b do test_projectbuilder.do
@@ -82,7 +82,8 @@ foreach d in 01_raw 01_raw/_archive 01_raw/_converted ///
              _code _code/_archive ///
              _documentation _documentation/_archive _documentation/website ///
              _archive {
-    confirm file "$work/Demo/`d'/."
+    local pbdir "$work/Demo/`d'"
+    mata: assert(direxists(st_local("pbdir")))
 }
 foreach f in 000_control.do 100_data_download.do 200_data_management.do ///
              300_labels.do 400_data_profiler.do 500_aggregation.do    ///
@@ -182,8 +183,9 @@ di as text "TEST f: a stray extra token is rejected -> _rc==198"
 di as text "{hline 70}"
 capture noisily projectbuilder E1 E2, path("$work")
 assert _rc == 198
-capture confirm file "$work/E1 E2/."
-assert _rc != 0
+local pbdir "$work/E1 E2"
+mata: st_local("pbisdir", strofreal(direxists(st_local("pbdir"))))
+assert !`pbisdir'
 * a quoted name containing a space is still a single, legal name
 projectbuilder "Two Words", path("$work")
 assert `"`r(project)'"' == "Two Words"
@@ -374,7 +376,8 @@ assert `"$output"'    == `"`W'/Demo2/03_output"'
 assert `"$code"'      == `"`W'/Demo2/_code"'
 assert `"$docs"'      == `"`W'/Demo2/_documentation"'
 foreach g in root raw converted cleaned output code docs {
-    confirm file "${`g'}/."
+    local pbdir "${`g'}"
+    mata: assert(direxists(st_local("pbdir")))
 }
 
 *=======================================================================*
@@ -394,7 +397,8 @@ program define loadlines
     import delimited using `0', clear delimiters("`=char(1)'", asstring) ///
         varnames(nonames) bindquote(nobind) encoding("utf-8")
 end
-confirm file "$work/."
+local pbdir "$work"
+mata: assert(direxists(st_local("pbdir")))
 di as text `"test_projectbuilder: resumed with work = $work"'
 
 di as text "{hline 70}"
@@ -432,8 +436,9 @@ di as text "{hline 70}"
 * re-run with 602, so the user could not simply fix the typo and retry.
 capture noisily projectbuilder Tick, path("$work") description("don`t do this")
 assert _rc == 198
-capture confirm file "$work/Tick/."
-assert _rc != 0                            // no folder was left behind
+local pbdir "$work/Tick"
+mata: st_local("pbisdir", strofreal(direxists(st_local("pbdir"))))
+assert !`pbisdir'                            // no folder was left behind
 capture confirm file "$work/Tick/_code/000_control.do"
 assert _rc != 0
 * so the corrected call succeeds instead of hitting the clobber guard
@@ -445,8 +450,9 @@ foreach o in topic timeline othernotes url {
     capture projectbuilder TickB, path("$work") `o'("bad`=char(96)'value")
     assert _rc == 198
 }
-capture confirm file "$work/TickB/."
-assert _rc != 0
+local pbdir "$work/TickB"
+mata: st_local("pbisdir", strofreal(direxists(st_local("pbdir"))))
+assert !`pbisdir'
 
 di as text "{hline 70}"
 di as text "TEST n: a tilde survives into the generated files"
@@ -743,7 +749,8 @@ foreach p in Ex01Feed Ex03Rates Ex04Auto {
 * quoted.  Prove the generated control file actually runs from here.
 do "Ex01Feed/_code/000_control.do"
 foreach g in root raw converted cleaned output code docs {
-    confirm file "${`g'}/."
+    local pbdir "${`g'}"
+    mata: assert(direxists(st_local("pbdir")))
 }
 assert strpos("$root", " ")            // the space really did survive
 quietly cd `"`pwd_before'"'
@@ -804,8 +811,9 @@ capture noisily projectbuilder pbdemo, path("`c(tmpdir)'")
 assert _rc == 602
 capture noisily projectbuilder pbdemo2, path("`c(tmpdir)'") publicfacing(maybe)
 assert _rc == 198
-capture confirm file "`c(tmpdir)'pbdemo2/."
-assert _rc != 0                             // "before anything is created"
+local pbdir "`c(tmpdir)'pbdemo2"
+mata: st_local("pbisdir", strofreal(direxists(st_local("pbdir"))))
+assert !`pbisdir'                             // "before anything is created"
 * Step 7 -- the topic changes, the rest survives
 projectbuilder pbdemo, path("`c(tmpdir)'") rebuild topic("procurement")
 loadlines "$pbdemo/_documentation/Readme.md"
@@ -816,7 +824,8 @@ assert r(N) >= 1
 * Step 8 -- the control file runs and its globals are real directories
 do "$pbdemo/_code/000_control.do"
 foreach g in root raw converted cleaned output code docs {
-    confirm file "${`g'}/."
+    local pbdir "${`g'}"
+    mata: assert(direxists(st_local("pbdir")))
 }
 * the walkthrough never moved the working directory
 assert `"`c(pwd)'"' == `"`pwd_before'"'
@@ -859,7 +868,8 @@ confirm file "CountyBudgets/01_raw/budgets_fy25.csv"
 * Workflow A, Step 3 as printed
 do "CountyBudgets/_code/000_control.do"
 foreach g in root raw converted cleaned output code docs {
-    confirm file "${`g'}/."
+    local pbdir "${`g'}"
+    mata: assert(direxists(st_local("pbdir")))
 }
 quietly cd `"`pwd_before'"'
 global work    `"`W'"'
@@ -898,6 +908,8 @@ di as text "{hline 70}"
 * their checks into no-ops.
 local pk       `"$pkgroot"'
 local plusdir  `"`c(sysdir_plus)'"'
+capture which convertanything
+local hadconv = (_rc == 0)               // were the companions there to begin with?
 adopath - PLUS
 capture which convertanything
 local haveconv = (_rc == 0)
@@ -918,7 +930,7 @@ confirm file "$work/Bare/_documentation/website/index.html"
 adopath ++ `"`plusdir'"'
 adopath ++ `"`pk'"'
 capture which convertanything
-assert _rc == 0                          // the companions are reachable again
+assert (_rc == 0) == `hadconv'           // as reachable as before PLUS was dropped
 
 di as text "{hline 70}"
 di as text "TEST y: data() that does not exist is reported, not glossed over"
@@ -1317,7 +1329,50 @@ assert r(N) >= 1
 quietly cd `"`pwd_before'"'
 di as text "  change report named the changed file and counted the rest"
 
+di as text "{hline 70}"
+di as text "TEST jj: a leading ~ in path() means the home folder, never a ~ folder"
+di as text "{hline 70}"
+* Used to: path("~/x") was taken as relative and joined to the current
+* directory, so it failed with "base path not found -- <cwd>/~/x", and
+* path("~") scaffolded into a literal folder named ~ under the cwd.  This
+* test must not write into the real home folder, so it points at a
+* home subfolder that does not exist: projectbuilder creates one level
+* only, so nothing is made, and the messages show where ~ resolved.
+local pwd_before `"`c(pwd)'"'
+quietly cd "$work"
+local home : environment HOME
+if "`c(os)'" == "Windows" {
+    local up : environment USERPROFILE
+    if `"`up'"' != "" local home `"`up'"'
+}
+local miss "pb_no_such_dir_`=runiformint(100000, 999999)'"
+local pbdir `"`home'/`miss'"'
+mata: st_local("pbisdir", strofreal(direxists(st_local("pbdir"))))
+assert !`pbisdir'
+local ls0 = c(linesize)
+set linesize 255                          // keep long paths on one log line
+tempfile tlog
+quietly log using "`tlog'.log", text name(tildecheck)
+capture noisily projectbuilder TildeT, path("~/`miss'/deeper")
+local rc1 = _rc
+capture noisily projectbuilder sitebuild, path("~/`miss'")
+local rc2 = _rc
+quietly log close tildecheck
+set linesize `ls0'
+assert `rc1' != 0
+assert `rc2' == 601
+local pbdir "$work/~"
+mata: st_local("pbisdir", strofreal(direxists(st_local("pbdir"))))
+assert !`pbisdir'                         // no literal ~ folder in the cwd
+loadlines "`tlog'.log"
+quietly count if strpos(v1, "`miss'") & strpos(v1, "/~/")
+assert r(N) == 0                          // ~ never joined onto the cwd
+quietly count if strpos(v1, "`miss' is not a directory")
+assert r(N) >= 1
+quietly cd `"`pwd_before'"'
+di as text "  ~ resolved to the home folder in path() and sitebuild path()"
+
 di as text ""
 di as text "{hline 70}"
-di as text "projectbuilder v2.1.0: ALL TESTS PASSED"
+di as text "projectbuilder v2.1.1: ALL TESTS PASSED"
 di as text "{hline 70}"

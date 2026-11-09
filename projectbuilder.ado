@@ -1,4 +1,4 @@
-*! version 2.1.0  08aug2026  Eric A. Booth, Sr Researcher, Texas 2036
+*! version 2.1.1  09nov2026  Eric A. Booth, Sr Researcher, Texas 2036
 *!                           Elizabeth Teas, Sr Research Scientist, Far Harbor, LLC
 *! projectbuilder -- scaffold a data-analysis project folder with a
 *!                   numbered do-file pipeline, then (optionally) ingest
@@ -12,6 +12,9 @@
 *! no shell calls.  Companion to "Applied Program Evaluation Using Stata".
 *! Support: eric.a.booth@gmail.com
 *!
+*! v2.1.1: a leading ~ in path(), sitebuild path(), and data() means the
+*!         home folder (HOME; USERPROFILE on Windows), not a relative
+*!         folder named ~ under the current directory.
 *! v2.1.0: the webdoc2 render is self-contained (a fallback header ships
 *!         inside every project, so no net get / adopath step); new
 *!         -sitebuild- subcommand writes a catalog page across projects;
@@ -76,6 +79,13 @@ program define projectbuilder, rclass
         di as err "projectbuilder: the project name may not contain a backtick"
         exit 198
     }
+
+    * ---- expand a leading ~ in path() and data() -------------------------
+    * Without this, path("~/projects") was treated as relative and joined to
+    * the current directory: it failed with a misleading "base path not
+    * found", and path("~") quietly scaffolded into a literal folder named ~.
+    pb_tilde path `"`macval(path)'"'
+    pb_tilde data `"`macval(data)'"'
 
     * ---- park ~ so the file writer cannot mistake it for a marker --------
     * pb_wl writes $ and ` into the generated do-files by spelling them ~D
@@ -1179,6 +1189,31 @@ program define pb_isdir
     c_local `retname' `r'
 end
 
+* --- pb_tilde: expand a leading ~ (alone, ~/ or ~\) in the caller's local
+*     named first to the home folder: HOME, or on Windows USERPROFILE, then
+*     HOMEDRIVE+HOMEPATH, then HOME.  ~user and an unset home are left as is.
+program define pb_tilde
+    gettoken retname 0 : 0
+    gettoken p 0 : 0
+    if substr(`"`macval(p)'"', 1, 1) != "~" exit
+    local c2 = substr(`"`macval(p)'"', 2, 1)
+    if !inlist(`"`c2'"', "", "/", "\") exit
+    local home : environment HOME
+    if "`c(os)'" == "Windows" {
+        local up : environment USERPROFILE
+        local hd : environment HOMEDRIVE
+        local hp : environment HOMEPATH
+        if `"`up'"' != ""                local home `"`up'"'
+        else if `"`hd'`hp'"' != ""       local home `"`hd'`hp'"'
+    }
+    if `"`home'"' == "" exit
+    if `"`c2'"' != "" & inlist(substr(`"`home'"', -1, 1), "/", "\") {
+        local home = substr(`"`home'"', 1, strlen(`"`home'"') - 1)
+    }
+    local rest = substr(`"`macval(p)'"', 2, .)
+    c_local `retname' `"`home'`macval(rest)'"'
+end
+
 * --- pb_unesc: restore the characters parked by the caller -- char(5) back
 *     to ~, char(1) back to $ -- for text that is about to be shown or
 *     written outside pb_wl.
@@ -1447,6 +1482,7 @@ program define pb_sitebuild, rclass
         }
     }
 
+    pb_tilde path `"`macval(path)'"'
     local base `"`c(pwd)'"'
     if `"`path'"' != "" local base `"`path'"'
     local isabs = 0
