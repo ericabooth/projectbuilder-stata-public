@@ -13,7 +13,13 @@ calls, and the same behavior on macOS, Windows, and Linux.
 
 ## Install
 
-From GitHub:
+From SSC (version 2.0.1):
+
+```stata
+ssc install projectbuilder
+```
+
+From GitHub (version 2.1.2, the latest):
 
 ```stata
 net install projectbuilder, from("https://raw.githubusercontent.com/ericabooth/projectbuilder-stata-public/main/") replace force
@@ -30,7 +36,7 @@ net get projectbuilder, from("https://raw.githubusercontent.com/ericabooth/proje
 Requires Stata 16.0 or newer. No hard dependencies.
 
 
-<img width="2400" height="1260" alt="projectbuilder_srctag_suite" src="https://github.com/user-attachments/assets/f4aa142e-d63d-46b7-a805-247bac2fc10d" />
+<img width="2400" height="1260" alt="projectbuilder and srctag" src="assets/projectbuilder_srctag_suite.png" />
 
 ## Quick start
 
