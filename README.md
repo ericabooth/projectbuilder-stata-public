@@ -135,10 +135,10 @@ automatic pass skips that step, and a one-line note names the install command.
 
 | Package | What it adds | Install |
 |---------|--------------|---------|
-| `convertanything` | bulk-convert `01_raw/` to `.dta` in `01_raw/_converted/` | `net install convertanything, from("https://raw.githubusercontent.com/ericabooth/convertanything-stata-public/main/")` |
-| `combineall` | append/merge the converted files into the analytic file | `net install combineall, from("https://raw.githubusercontent.com/ericabooth/combineall-stata-public/main/")` |
+| `convertanything` | bulk-convert `01_raw/` to `.dta` in `01_raw/_converted/` | `ssc install convertanything` |
+| `combineall` | append/merge the converted files into the analytic file | `ssc install combineall` |
 | `descsave` | codebook (.dta plus .xlsx) from `300_labels.do` | `ssc install descsave` |
-| `srctag` / `srcfind` | tag and search each variable's source lineage | `net install srctag, from("https://raw.githubusercontent.com/ericabooth/srctag-stata-public/main/")` |
+| `srctag` / `srcfind` | tag and search each variable's source lineage | `ssc install srctag` |
 | `datadictionary` | codebook workbook; harvests srctag's tags | `ssc install datadictionary` |
 | `webdoc2` | render a richer `index.html` | `ssc install webdoc`, then `net install webdoc2` (author's GitHub) |
 
